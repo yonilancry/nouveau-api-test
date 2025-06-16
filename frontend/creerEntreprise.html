@@ -10,6 +10,10 @@
 
   <form id="register-form">
     <div class="mb-3">
+      <label for="nom" class="form-label">Nom de l'entreprise</label>
+      <input type="text" class="form-control" id="nom" required>
+    </div>
+    <div class="mb-3">
       <label for="NomRepresentant" class="form-label">Nom du représentant</label>
       <input type="text" class="form-control" id="NomRepresentant" required>
     </div>
@@ -42,6 +46,7 @@
       e.preventDefault();
 
       const data = {
+        nom: document.getElementById('nom').value,
         NomRepresentant: document.getElementById('NomRepresentant').value,
         qualiteRepresentant: document.getElementById('qualiteRepresentant').value,
         email: document.getElementById('email').value,

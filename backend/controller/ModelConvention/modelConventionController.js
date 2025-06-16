@@ -1,34 +1,41 @@
 const pool = require('../../db');
 
+// Fonction utilitaire pour parser "details"
+function parseDetails(details) {
+  if (!details) return null;
+
+  if (typeof details === 'string') {
+    try {
+      // D'abord, tenter un JSON.parse si c'est du vrai JSON
+      const parsed = JSON.parse(details);
+      return JSON.stringify(parsed);
+    } catch {
+      // Sinon, traiter comme une string séparée par des virgules
+      const fields = details
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => f.length > 0);
+      return JSON.stringify(fields);
+    }
+  }
+
+  // Si details est déjà un objet ou un tableau
+  return JSON.stringify(details);
+}
+
 module.exports = {
 
   createModelConvention: async (req, res) => {
     try {
       const { details, ecole_id } = req.body;
-
-      // Si details est un objet (tableau ou objet), on stringify, sinon on garde null ou string valide
-      let detailsJson = null;
-      if (details) {
-        if (typeof details === 'string') {
-          // Vérifie si c'est une string JSON valide
-          try {
-            JSON.parse(details);
-            detailsJson = details;
-          } catch {
-            // Si ce n'est pas une string JSON valide, on stringify
-            detailsJson = JSON.stringify(details);
-          }
-        } else {
-          detailsJson = JSON.stringify(details);
-        }
-      }
+      const detailsJson = parseDetails(details);
 
       const [result] = await pool.execute(
         `INSERT INTO ModelConvention (details, ecole_id) VALUES (?, ?)`,
         [detailsJson, ecole_id]
       );
 
-      res.status(201).json({ id: result.insertId, details, ecole_id });
+      res.status(201).json({ id: result.insertId, details: JSON.parse(detailsJson), ecole_id });
     } catch (error) {
       console.error('Erreur création modèle convention:', error);
       res.status(500).json({ error: 'Erreur lors de la création du modèle de convention' });
@@ -40,17 +47,13 @@ module.exports = {
       const [rows] = await pool.query('SELECT * FROM ModelConvention');
 
       const data = rows.map(row => {
-        if (!row.details) return { ...row, details: null };
-
+        let parsedDetails = null;
         try {
-          // Si details est déjà un objet (par ex. Buffer ou autre), on renvoie tel quel
-          if (typeof row.details === 'object') return { ...row, details: row.details };
-
-          return { ...row, details: JSON.parse(row.details) };
+          parsedDetails = row.details ? JSON.parse(row.details) : null;
         } catch {
-          // Si parse échoue, renvoie tel quel (string)
-          return { ...row, details: row.details };
+          parsedDetails = row.details;
         }
+        return { ...row, details: parsedDetails };
       });
 
       res.json(data);
@@ -66,19 +69,10 @@ module.exports = {
       if (rows.length === 0) return res.status(404).json({ error: 'Modèle de convention non trouvé' });
 
       const model = rows[0];
-
-      if (model.details) {
-        try {
-          if (typeof model.details === 'object') {
-            model.details = model.details;
-          } else {
-            model.details = JSON.parse(model.details);
-          }
-        } catch {
-          // En cas d’erreur, on laisse details tel quel
-        }
-      } else {
-        model.details = null;
+      try {
+        model.details = model.details ? JSON.parse(model.details) : null;
+      } catch {
+        // Si parse échoue, on laisse tel quel
       }
 
       res.json(model);
@@ -91,20 +85,7 @@ module.exports = {
   updateModelConvention: async (req, res) => {
     try {
       const { details, ecole_id } = req.body;
-
-      let detailsJson = null;
-      if (details) {
-        if (typeof details === 'string') {
-          try {
-            JSON.parse(details);
-            detailsJson = details;
-          } catch {
-            detailsJson = JSON.stringify(details);
-          }
-        } else {
-          detailsJson = JSON.stringify(details);
-        }
-      }
+      const detailsJson = parseDetails(details);
 
       const [result] = await pool.execute(
         `UPDATE ModelConvention SET details = ?, ecole_id = ? WHERE id = ?`,
@@ -113,7 +94,7 @@ module.exports = {
 
       if (result.affectedRows === 0) return res.status(404).json({ error: 'Modèle de convention non trouvé' });
 
-      res.json({ id: req.params.id, details, ecole_id });
+      res.json({ id: req.params.id, details: JSON.parse(detailsJson), ecole_id });
     } catch (error) {
       console.error('Erreur update modèle convention:', error);
       res.status(500).json({ error: 'Erreur lors de la mise à jour du modèle de convention' });

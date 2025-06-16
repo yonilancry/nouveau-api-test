@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestion des modèles de conventions</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="container py-4">
+
+    <h1>Gestion des modèles de conventions</h1>
+  
+    <!-- Liste des modèles -->
+    <h2>Liste des modèles</h2>
+    <ul id="modeles-list" class="list-group mb-4"></ul>
+  
+    <!-- Formulaire création modèle -->
+    <h2>Ajouter un modèle de convention</h2>
+    <form id="modele-form" class="mb-4">
+      <div class="mb-3">
+        <label for="ecole_id" class="form-label">École ID</label>
+        <input type="number" class="form-control" id="ecole_id" required />
+      </div>
+      <div class="mb-3">
+        <label for="details" class="form-label">Champs supplémentaires</label>
+        <input type="text" class="form-control" id="details" placeholder="Ex : sexe, rémunération, durée" required />
+      </div>
+      <button type="submit" class="btn btn-primary">Ajouter</button>
+    </form>
+  
+    <script>
+        const apiUrl = 'http://localhost:3000/api/model-conventions';
+        const connectedEcoleId = 2; // À remplacer dynamiquement (ex: depuis session, JWT, etc.)
+      
+        // Charger le modèle de l'école connectée uniquement
+        async function loadModeles() {
+          try {
+            const res = await fetch(apiUrl);
+            if (!res.ok) {
+              alert('Erreur lors du chargement des modèles');
+              return;
+            }
+      
+            const modeles = await res.json();
+            const modele = modeles.find(m => m.ecole_id === connectedEcoleId);
+      
+            const list = document.getElementById('modeles-list');
+            list.innerHTML = '';
+      
+            if (modele) {
+              const champs = Array.isArray(modele.details) ? modele.details.join(', ') : modele.details;
+              const li = document.createElement('li');
+              li.className = 'list-group-item';
+              li.textContent = `Modèle ID: ${modele.id} — École: ${modele.ecole_id} — Champs: ${champs}`;
+              list.appendChild(li);
+            } else {
+              list.innerHTML = '<li class="list-group-item text-muted">Aucun modèle trouvé pour cette école.</li>';
+            }
+      
+          } catch (err) {
+            console.error('Erreur chargement modèle:', err);
+            alert('Erreur de chargement');
+          }
+        }
+      
+        // Appel initial
+        loadModeles();
+      
+        // Le formulaire de création/màj fonctionne déjà correctement
+      </script>
+      
+  </body>
+</html>

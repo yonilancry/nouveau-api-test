@@ -1,34 +1,54 @@
-// controller/entrepriseController.js
 const pool = require('../../db');
+const bcrypt = require('bcrypt');
 
 module.exports = {
 
   createEntreprise: async (req, res) => {
     try {
       const {
-        NomRepresentant,
+        representant,
+        nom,
         qualiteRepresentant,
         email,
         numero_telephone,
         adresse,
-        signature // base64 string ou null
+        mot_de_passe,   // mot de passe clair
+        signature       // base64 string ou null
       } = req.body;
+
+      if (!mot_de_passe) {
+        return res.status(400).json({ error: "Le mot de passe est obligatoire." });
+      }
+
+      // Hash du mot de passe
+      const hashedPassword = await bcrypt.hash(mot_de_passe, 10);
 
       const [result] = await pool.execute(
         `INSERT INTO Entreprise 
-         (NomRepresentant, qualiteRepresentant, email, numero_telephone, adresse, signature) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
+         (representant, nom, qualiteRepresentant, email, numero_telephone, adresse, mot_de_passe, signature) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          NomRepresentant,
+          representant,
+          nom || null,
           qualiteRepresentant,
           email,
           numero_telephone,
           adresse,
+          hashedPassword,
           signature ? Buffer.from(signature, 'base64') : null
         ]
       );
 
-      res.status(201).json({ id: result.insertId, ...req.body });
+      res.status(201).json({
+        id: result.insertId,
+        representant,
+        nom,
+        qualiteRepresentant,
+        email,
+        numero_telephone,
+        adresse,
+        signature
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Erreur lors de la création de l\'entreprise' });
@@ -37,7 +57,9 @@ module.exports = {
 
   getAllEntreprises: async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT id, NomRepresentant, qualiteRepresentant, email, numero_telephone, adresse FROM Entreprise');
+      const [rows] = await pool.query(
+        'SELECT id, representant, nom, qualiteRepresentant, email, numero_telephone, adresse FROM Entreprise'
+      );
       res.json(rows);
     } catch (error) {
       console.error(error);
@@ -47,7 +69,10 @@ module.exports = {
 
   getEntrepriseById: async (req, res) => {
     try {
-      const [rows] = await pool.execute('SELECT * FROM Entreprise WHERE id = ?', [req.params.id]);
+      const [rows] = await pool.execute(
+        'SELECT id, representant, nom, qualiteRepresentant, email, numero_telephone, adresse FROM Entreprise WHERE id = ?',
+        [req.params.id]
+      );
       if (rows.length === 0) return res.status(404).json({ error: 'Entreprise non trouvée' });
       res.json(rows[0]);
     } catch (error) {
@@ -59,29 +84,46 @@ module.exports = {
   updateEntreprise: async (req, res) => {
     try {
       const {
-        NomRepresentant,
+        representant,
+        nom,
+        qualiteRepresentant,
+        email,
+        numero_telephone,
+        adresse,
+        mot_de_passe,
+        signature
+      } = req.body;
+
+      let hashedPassword = null;
+      if (mot_de_passe) {
+        hashedPassword = await bcrypt.hash(mot_de_passe, 10);
+      }
+
+      let query;
+      let params;
+
+      if (hashedPassword) {
+        query = `UPDATE Entreprise SET representant=?, nom=?, qualiteRepresentant=?, email=?, numero_telephone=?, adresse=?, mot_de_passe=?, signature=? WHERE id=?`;
+        params = [representant, nom || null, qualiteRepresentant, email, numero_telephone, adresse, hashedPassword, signature ? Buffer.from(signature, 'base64') : null, req.params.id];
+      } else {
+        query = `UPDATE Entreprise SET representant=?, nom=?, qualiteRepresentant=?, email=?, numero_telephone=?, adresse=?, signature=? WHERE id=?`;
+        params = [representant, nom || null, qualiteRepresentant, email, numero_telephone, adresse, signature ? Buffer.from(signature, 'base64') : null, req.params.id];
+      }
+
+      const [result] = await pool.execute(query, params);
+
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Entreprise non trouvée' });
+
+      res.json({
+        id: req.params.id,
+        representant,
+        nom,
         qualiteRepresentant,
         email,
         numero_telephone,
         adresse,
         signature
-      } = req.body;
-
-      const [result] = await pool.execute(
-        `UPDATE Entreprise SET NomRepresentant=?, qualiteRepresentant=?, email=?, numero_telephone=?, adresse=?, signature=? WHERE id=?`,
-        [
-          NomRepresentant,
-          qualiteRepresentant,
-          email,
-          numero_telephone,
-          adresse,
-          signature ? Buffer.from(signature, 'base64') : null,
-          req.params.id
-        ]
-      );
-
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'Entreprise non trouvée' });
-      res.json({ id: req.params.id, ...req.body });
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Erreur lors de la mise à jour de l\'entreprise' });
