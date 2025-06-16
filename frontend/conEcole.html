@@ -23,5 +23,36 @@
   <hr>
   <p>Pas encore de compte ?</p>
   <a href="creerEcole.html" class="btn btn-secondary">Créer un compte</a>
+  <script>
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const data = {
+    email: document.getElementById('email').value,
+    motdepasse: document.getElementById('password').value
+  };
+
+  try {
+    const res = await fetch('http://localhost:3000/auth/ecole/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      // Stocke le token si besoin
+      localStorage.setItem('token', result.token);
+      alert(result.message);
+      window.location.href = 'ecole.html'; // Redirige vers la page école
+    } else {
+      alert(result.error || 'Erreur de connexion');
+    }
+  } catch (err) {
+    alert('Erreur serveur');
+  }
+});
+</script>
 </body>
 </html>

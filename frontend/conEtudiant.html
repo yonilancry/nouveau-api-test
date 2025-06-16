@@ -14,14 +14,40 @@
       <input type="email" class="form-control" id="email" required>
     </div>
     <div class="mb-3">
-      <label for="password" class="form-label">Mot de passe</label>
-      <input type="password" class="form-control" id="password" required>
+      <label for="motdepasse" class="form-label">Mot de passe</label>
+      <input type="password" class="form-control" id="motdepasse" required>
     </div>
     <button type="submit" class="btn btn-primary">Se connecter</button>
   </form>
 
-  <hr>
-  <p>Pas encore de compte ?</p>
-  <a href="creerEtudiant.html" class="btn btn-secondary">Créer un compte</a>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const data = {
+        email: document.getElementById('email').value,
+        motdepasse: document.getElementById('motdepasse').value
+      };
+
+      try {
+        const res = await fetch('http://localhost:3000/auth/etudiant/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          localStorage.setItem('token', result.token);
+          alert('Connexion réussie');
+          window.location.href = 'etudiant.html';
+        } else {
+          alert(result.error || 'Erreur de connexion');
+        }
+      } catch (err) {
+        alert('Erreur serveur');
+      }
+    });
+  </script>
 </body>
 </html>

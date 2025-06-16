@@ -1,11 +1,1 @@
-# Ne pas versionner les dépendances
 node_modules/
-
-# Dossiers temporaires
-dist/
-build/
-
-# Fichiers sensibles ou systèmes
-.env
-.DS_Store
-*.log
