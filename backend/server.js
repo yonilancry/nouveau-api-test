@@ -4,11 +4,17 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const pool = require('./db');
+const authRoutes = require('./routes/auth');
+
+
 
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use('/auth', authRoutes);
+
+
 
 // === Redirection manuelle de "/" vers accueil.html AVANT les fichiers statiques ===
 app.get('/', (req, res) => {

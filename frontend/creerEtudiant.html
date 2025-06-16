@@ -34,15 +34,41 @@
       <input type="date" class="form-control" id="dateNaissance" required>
     </div>
     <div class="mb-3">
-      <label for="ecole_id" class="form-label">ID de l'école</label>
-      <input type="number" class="form-control" id="ecole_id" required>
-    </div>
-    <div class="mb-3">
       <label for="motdepasse" class="form-label">Mot de passe</label>
       <input type="password" class="form-control" id="motdepasse" required>
     </div>
 
     <button type="submit" class="btn btn-primary">Créer le compte</button>
   </form>
+  <script>
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const data = {
+    nom: document.getElementById('nom').value,
+    prenom: document.getElementById('prenom').value,
+    adresse: document.getElementById('adresse').value,
+    email: document.getElementById('email').value,
+    numTel: document.getElementById('numTel').value,
+    dateNaissance: document.getElementById('dateNaissance').value,
+    motdepasse: document.getElementById('motdepasse').value
+  };
+
+  try {
+    const res = await fetch('http://localhost:3000/auth/etudiant/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    if (res.ok) alert(result.message);
+    else alert(result.error || 'Erreur');
+  } catch (err) {
+    alert('Erreur serveur');
+  }
+});
+</script>
+
 </body>
 </html>
