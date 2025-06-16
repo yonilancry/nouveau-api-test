@@ -7,7 +7,7 @@ module.exports = {
     try {
       const {
         Nom,
-        prénom,
+        prenom,
         adresse,
         email,
         numTel,
@@ -15,14 +15,15 @@ module.exports = {
         signature, // base64 string ou null
         ecole_id // lien vers l'école, si besoin
       } = req.body;
+      console.log(Nom);
 
       const [result] = await pool.execute(
         `INSERT INTO Etudiant 
-         (Nom, prénom, adresse, email, numTel, dateNaissance, signature, ecole_id) 
+         (Nom, prenom, adresse, email, numTel, dateNaissance, signature, ecole_id) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           Nom,
-          prénom,
+          prenom,
           adresse,
           email,
           numTel,
@@ -34,14 +35,14 @@ module.exports = {
 
       res.status(201).json({ id: result.insertId, ...req.body });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Erreur lors de la création de l\'étudiant' });
+        console.error('❌ ERREUR SQL:', error);
+        res.status(500).json({ error: 'Erreur lors de la création de l\'étudiant' });
     }
   },
 
   getAllEtudiants: async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT id, Nom, prénom, adresse, email, numTel, dateNaissance FROM Etudiant');
+      const [rows] = await pool.query('SELECT id, Nom, prenom, adresse, email, numTel, dateNaissance FROM Etudiant');
       res.json(rows);
     } catch (error) {
       console.error(error);
@@ -64,7 +65,7 @@ module.exports = {
     try {
       const {
         Nom,
-        prénom,
+        prenom,
         adresse,
         email,
         numTel,
@@ -74,10 +75,10 @@ module.exports = {
       } = req.body;
 
       const [result] = await pool.execute(
-        `UPDATE Etudiant SET Nom=?, prénom=?, adresse=?, email=?, numTel=?, dateNaissance=?, signature=?, ecole_id=? WHERE id=?`,
+        `UPDATE Etudiant SET Nom=?, prenom=?, adresse=?, email=?, numTel=?, dateNaissance=?, signature=?, ecole_id=? WHERE id=?`,
         [
           Nom,
-          prénom,
+          prenom,
           adresse,
           email,
           numTel,
