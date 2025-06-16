@@ -1,0 +1,12 @@
+# Ne pas versionner les dépendances
+node_modules
+backend/node_modules
+.bin
+# Dossiers temporaires
+dist/
+build/
+
+# Fichiers sensibles ou systèmes
+.env
+.DS_Store
+*.log
