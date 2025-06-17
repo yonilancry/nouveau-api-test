@@ -9,7 +9,7 @@ const SALT_ROUNDS = 10;
 
 // === Inscription Étudiant ===
 router.post('/etudiant/register', async (req, res) => {
-  const { nom, prenom, adresse, email, numTel, dateNaissance, motdepasse,ecole_id } = req.body;
+  const { nom, prenom, adresse, email, numTel, dateNaissance, motdepasse, ecole_id } = req.body;
   try {
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(motdepasse, SALT_ROUNDS);
