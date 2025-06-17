@@ -9,7 +9,7 @@ const SALT_ROUNDS = 10;
 
 // === Inscription Étudiant ===
 router.post('/etudiant/register', async (req, res) => {
-  const { nom, prenom, adresse, email, numTel, dateNaissance, motdepasse } = req.body;
+  const { nom, prenom, adresse, email, numTel, dateNaissance, motdepasse,ecole_id } = req.body;
   try {
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(motdepasse, SALT_ROUNDS);
@@ -17,7 +17,7 @@ router.post('/etudiant/register', async (req, res) => {
     await pool.query(
       `INSERT INTO Etudiant (nom, prenom, adresse, email, numero_telephone, date_naissance, mot_de_passe, ecole_id, signature)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [nom, prenom, adresse, email, numTel, dateNaissance, hashedPassword, 8, null]
+      [nom, prenom, adresse, email, numTel, dateNaissance, hashedPassword, ecole_id, null]
     );
     res.status(201).json({ message: 'Étudiant inscrit avec succès' });
   } catch (err) {
