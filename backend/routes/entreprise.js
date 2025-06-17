@@ -7,5 +7,7 @@ router.get('/', entrepriseController.getAllEntreprises);
 router.get('/:id', entrepriseController.getEntrepriseById);
 router.put('/:id', entrepriseController.updateEntreprise);
 router.delete('/:id', entrepriseController.deleteEntreprise);
+router.put('/:id/signature', entrepriseController.updateSignature);
+
 
 module.exports = router;

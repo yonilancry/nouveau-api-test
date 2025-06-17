@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Créer une convention</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="container py-4">
+
+  <h1>Créer une nouvelle convention</h1>
+  <form id="convention-form" class="mb-5"></form>
+
+  <script>
+    const apiModelUrl = 'http://localhost:3000/api/model-conventions';
+    const apiConventionUrl = 'http://localhost:3000/api/conventions';
+    const apiEtudiantUrl = 'http://localhost:3000/api/etudiants';
+
+    // Décodage du token JWT
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function loadForm(connectedEtudiant) {
+      const form = document.getElementById('convention-form');
+      form.innerHTML = '';
+
+      // On récupère le modèle lié à l'école
+      const res = await fetch(apiModelUrl);
+      const models = await res.json();
+      const model = models.find(m => m.ecole_id === connectedEtudiant.ecole_id);
+      let fields = null;
+      if (model && model.details) {
+        fields = typeof model.details === 'string' ? JSON.parse(model.details) : model.details;
+      }
+
+      // Champs fixes
+      form.innerHTML = `
+        <div class="mb-3">
+          <label for="status" class="form-label">Status</label>
+          <select id="status" name="status" class="form-select" required>
+            <option value="En cours">En cours</option>
+            <option value="Validée par entreprise">Validée par entreprise</option>
+            <option value="Validée par école">Validée par école</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="dateCreation" class="form-label">Date de création</label>
+          <input type="date" id="dateCreation" name="dateCreation" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label for="dateDebut" class="form-label">Date de début</label>
+          <input type="date" id="dateDebut" name="dateDebut" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label for="dateFin" class="form-label">Date de fin</label>
+          <input type="date" id="dateFin" name="dateFin" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label for="entreprise_id" class="form-label">ID Entreprise</label>
+          <input type="number" id="entreprise_id" name="entreprise_id" class="form-control" required />
+          <div class="form-text">Entrez l'ID de l'entreprise d'accueil</div>
+        </div>
+      `;
+
+      // Champs détails dynamiques
+      if (fields && fields.Etudiant && fields.Etudiant.length > 0) {
+        const sectionTitle = document.createElement('h4');
+        sectionTitle.textContent = 'Détails Étudiant';
+        form.appendChild(sectionTitle);
+
+        fields.Etudiant.forEach(field => {
+          const div = document.createElement('div');
+          div.className = 'mb-3';
+          div.innerHTML = `
+            <label class="form-label">${field}</label>
+            <input type="text" class="form-control" name="Etudiant.${field}" />
+          `;
+          form.appendChild(div);
+        });
+      } else {
+        const div = document.createElement('div');
+        div.className = 'mb-3';
+        div.innerHTML = `
+          <label for="libre" class="form-label">Informations complémentaires</label>
+          <textarea id="libre" class="form-control" rows="4" name="libre"></textarea>
+        `;
+        form.appendChild(div);
+      }
+
+      const btn = document.createElement('button');
+      btn.type = 'submit';
+      btn.className = 'btn btn-primary mt-3';
+      btn.textContent = 'Créer la convention';
+      form.appendChild(btn);
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const status = formData.get('status');
+        const dateCreation = formData.get('dateCreation');
+        const dateDebut = formData.get('dateDebut');
+        const dateFin = formData.get('dateFin');
+        const entreprise_id = formData.get('entreprise_id');
+
+        // Préparer inputs détails
+        let inputs = {};
+        if (fields && fields.Etudiant && fields.Etudiant.length > 0) {
+          inputs = { Etudiant: {} };
+          for (const [key, value] of formData.entries()) {
+            if (key.startsWith('Etudiant.')) {
+              const field = key.split('.')[1];
+              inputs.Etudiant[field] = value;
+            }
+          }
+        } else {
+          inputs = { libre: formData.get('libre') };
+        }
+
+        try {
+          const response = await fetch(apiConventionUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status,
+              dateCreation,
+              dateDebut,
+              dateFin,
+              entreprise_id: Number(entreprise_id),
+              etudiant_id: connectedEtudiant.id,
+              ecole_id: connectedEtudiant.ecole_id,
+              inputs
+            })
+          });
+
+          if (response.ok) {
+            alert('Convention créée avec succès.');
+            form.reset();
+          } else {
+            const err = await response.json();
+            alert('Erreur lors de la création : ' + (err.error || 'Erreur inconnue'));
+          }
+        } catch (err) {
+          alert('Erreur réseau lors de la création.');
+        }
+      });
+    }
+
+    (async function init() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Vous devez être connecté pour créer une convention.');
+        window.location.href = 'login-etudiant.html';
+        return;
+      }
+
+      const payload = parseJwt(token);
+      if (!payload || payload.role !== 'etudiant' || !payload.id) {
+        alert('Token invalide ou non autorisé.');
+        window.location.href = 'login-etudiant.html';
+        return;
+      }
+
+      try {
+        const etudiantRes = await fetch(`${apiEtudiantUrl}/${payload.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!etudiantRes.ok) throw new Error('Impossible de récupérer les infos étudiant');
+
+        const etudiant = await etudiantRes.json();
+
+        if (!etudiant.ecole_id) {
+          alert("Erreur : l'étudiant n'a pas d'école associée.");
+          return;
+        }
+
+        const connectedEtudiant = {
+          id: payload.id,
+          ecole_id: etudiant.ecole_id
+        };
+
+        loadForm(connectedEtudiant);
+
+      } catch (err) {
+        alert(err.message || 'Erreur lors de la récupération des infos étudiant.');
+        window.location.href = 'login-etudiant.html';
+      }
+    })();
+  </script>
+
+</body>
+</html>

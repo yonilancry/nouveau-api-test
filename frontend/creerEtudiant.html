@@ -1,74 +1,113 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Créer un compte Étudiant</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
 <body class="container py-5">
+
   <h2 class="mb-4">Créer un compte Étudiant</h2>
 
   <form id="register-form">
     <div class="mb-3">
       <label for="prenom" class="form-label">Prénom</label>
-      <input type="text" class="form-control" id="prenom" required>
+      <input type="text" class="form-control" id="prenom" required />
     </div>
     <div class="mb-3">
-      <label for="nom" class="form-label">Nom</label>
-      <input type="text" class="form-control" id="nom" required>
+      <label for="nom" class="form-label">nom</label>
+      <input type="text" class="form-control" id="nom" required />
     </div>
     <div class="mb-3">
       <label for="adresse" class="form-label">Adresse</label>
-      <input type="text" class="form-control" id="adresse" required>
+      <input type="text" class="form-control" id="adresse" required />
     </div>
     <div class="mb-3">
       <label for="email" class="form-label">Email</label>
-      <input type="email" class="form-control" id="email" required>
+      <input type="email" class="form-control" id="email" required />
     </div>
     <div class="mb-3">
       <label for="numTel" class="form-label">Téléphone</label>
-      <input type="text" class="form-control" id="numTel" required>
+      <input type="text" class="form-control" id="numTel" required />
     </div>
     <div class="mb-3">
       <label for="dateNaissance" class="form-label">Date de naissance</label>
-      <input type="date" class="form-control" id="dateNaissance" required>
+      <input type="date" class="form-control" id="dateNaissance" required />
     </div>
     <div class="mb-3">
       <label for="motdepasse" class="form-label">Mot de passe</label>
-      <input type="password" class="form-control" id="motdepasse" required>
+      <input type="password" class="form-control" id="motdepasse" required />
     </div>
-
+    <div class="mb-3">
+      <label for="ecole_id" class="form-label">École</label>
+      <select id="ecole_id" class="form-select" required>
+        <option value="">-- Sélectionnez votre école --</option>
+        <!-- Options chargées dynamiquement -->
+      </select>
+    </div>
     <button type="submit" class="btn btn-primary">Créer le compte</button>
   </form>
+
   <script>
-document.getElementById('register-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
+    async function loadEcoles() {
+      const select = document.getElementById('ecole_id');
+      try {
+        const res = await fetch('http://localhost:3000/api/ecoles');
+        if (!res.ok) throw new Error('Erreur chargement écoles');
+        const ecoles = await res.json();
+        ecoles.forEach(ecole => {
+          const option = document.createElement('option');
+          option.value = ecole.id;
+          option.textContent = ecole.raisonSocial; // adapte selon champ exact (nom ou autre)
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors du chargement des écoles');
+      }
+    }
 
-  const data = {
-    nom: document.getElementById('nom').value,
-    prenom: document.getElementById('prenom').value,
-    adresse: document.getElementById('adresse').value,
-    email: document.getElementById('email').value,
-    numTel: document.getElementById('numTel').value,
-    dateNaissance: document.getElementById('dateNaissance').value,
-    motdepasse: document.getElementById('motdepasse').value
-  };
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-  try {
-    const res = await fetch('http://localhost:3000/auth/etudiant/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      const data = {
+        nom: document.getElementById('nom').value.trim(),
+        prenom: document.getElementById('prenom').value.trim(),
+        adresse: document.getElementById('adresse').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        numero_telephone: document.getElementById('numTel').value.trim(),
+        date_naissance	: document.getElementById('dateNaissance').value,
+        motdepasse: document.getElementById('motdepasse').value,
+        ecole_id: Number(document.getElementById('ecole_id').value)
+      };
+
+      if (!data.ecole_id) {
+        alert('Veuillez sélectionner une école');
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:3000/auth/etudiant/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          alert(result.message || 'Compte créé avec succès');
+          e.target.reset();
+        } else {
+          alert(result.error || 'Erreur lors de la création du compte');
+        }
+      } catch (err) {
+        alert('Erreur serveur, veuillez réessayer plus tard');
+      }
     });
 
-    const result = await res.json();
-    if (res.ok) alert(result.message);
-    else alert(result.error || 'Erreur');
-  } catch (err) {
-    alert('Erreur serveur');
-  }
-});
-</script>
+    // Chargement des écoles au chargement de la page
+    loadEcoles();
+  </script>
 
 </body>
 </html>

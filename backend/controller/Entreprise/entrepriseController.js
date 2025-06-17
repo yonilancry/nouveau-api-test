@@ -139,5 +139,32 @@ module.exports = {
       console.error(error);
       res.status(500).json({ error: 'Erreur lors de la suppression de l\'entreprise' });
     }
+  }, 
+  updateSignature: async (req, res) => {
+    try {
+      const { signature } = req.body;
+      const { id } = req.params;
+  
+      if (!signature) {
+        return res.status(400).json({ error: 'Signature manquante' });
+      }
+  
+      const bufferSignature = Buffer.from(signature, 'base64');
+  
+      const [result] = await pool.execute(
+        `UPDATE Entreprise SET signature = ? WHERE id = ?`,
+        [bufferSignature, id]
+      );
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Entreprise non trouvé' });
+      }
+  
+      res.json({ message: 'Signature mise à jour avec succès' });
+    } catch (error) {
+      console.error('Erreur updateSignature:', error);
+      res.status(500).json({ error: 'Erreur lors de la mise à jour de la signature' });
+    }
   }
+
 };

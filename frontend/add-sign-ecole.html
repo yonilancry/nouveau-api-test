@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Uploader une signature</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container py-4">
+  <h1>Uploader votre signature</h1>
+
+  <form id="signature-form">
+    <div class="mb-3">
+      <label for="signature" class="form-label">Fichier de signature (PNG, JPG, PDF)</label>
+      <input type="file" class="form-control" id="signature" name="signature" accept=".png,.jpg,.jpeg,.pdf" required />
+    </div>
+    <button type="submit" class="btn btn-primary">Envoyer</button>
+  </form>
+
+  <div id="preview-container" class="mt-4" style="display:none;">
+    <h2>Signature enregistrée :</h2>
+    <img id="signature-preview" alt="Signature" style="max-width:300px; border:1px solid #ccc;" />
+  </div>
+
+  <script>
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function loadSignature(userId, token) {
+      try {
+        const response = await fetch(`http://localhost:3000/api/ecoles/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          console.warn("Impossible de récupérer la signature");
+          return;
+        }
+
+        const data = await response.json();
+        console.log(data.signature);
+
+        if (data.signature) {
+          const previewContainer = document.getElementById('preview-container');
+          const previewImage = document.getElementById('signature-preview');
+          previewImage.src = `data:image/png;base64,${data.signature}`;
+          previewContainer.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement de la signature:', error);
+      }
+    }
+
+    document.getElementById('signature-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Vous devez être connecté.');
+        return (window.location.href = 'login-ecole.html');
+      }
+
+      const payload = parseJwt(token);
+      if (!payload?.id) {
+        return alert("Token invalide.");
+      }
+
+      const userId = payload.id;
+      const file = document.getElementById('signature').files[0];
+
+      if (!file) {
+        return alert("Veuillez sélectionner un fichier.");
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = async function () {
+        const base64Signature = reader.result.split(',')[1];
+
+        try {
+          const response = await fetch(`http://localhost:3000/api/ecoles/${userId}/signature`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ signature: base64Signature })
+          });
+
+          if (!response.ok) {
+            const text = await response.text();
+            console.error('Erreur réponse brute:', text);
+            return alert('Erreur : réponse inattendue du serveur');
+          }
+
+          alert("Signature envoyée avec succès !");
+          e.target.reset();
+
+          
+          // Afficher la signature mise à jour
+          const previewContainer = document.getElementById('preview-container');
+          const previewImage = document.getElementById('signature-preview');
+          previewImage.src = `data:image/png;base64,${base64Signature}`;
+          previewContainer.style.display = 'block';
+
+        } catch (err) {
+          console.error('Erreur réseau :', err);
+          alert("Erreur réseau.");
+        }
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    window.addEventListener('load', () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const payload = parseJwt(token);
+      if (!payload?.id) return;
+
+      loadSignature(payload.id, token);
+    });
+  </script>
+</body>
+</html>

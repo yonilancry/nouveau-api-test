@@ -8,66 +8,130 @@
 </head>
 <body class="container py-4">
 
-    <h1>Gestion des modèles de conventions</h1>
-  
-    <!-- Liste des modèles -->
-    <h2>Liste des modèles</h2>
-    <ul id="modeles-list" class="list-group mb-4"></ul>
-  
-    <!-- Formulaire création modèle -->
-    <h2>Ajouter un modèle de convention</h2>
-    <form id="modele-form" class="mb-4">
-      <div class="mb-3">
-        <label for="ecole_id" class="form-label">École ID</label>
-        <input type="number" class="form-control" id="ecole_id" required />
-      </div>
-      <div class="mb-3">
-        <label for="details" class="form-label">Champs supplémentaires</label>
-        <input type="text" class="form-control" id="details" placeholder="Ex : sexe, rémunération, durée" required />
-      </div>
-      <button type="submit" class="btn btn-primary">Ajouter</button>
-    </form>
-  
-    <script>
-        const apiUrl = 'http://localhost:3000/api/model-conventions';
-        const connectedEcoleId = 2; // À remplacer dynamiquement (ex: depuis session, JWT, etc.)
-      
-        // Charger le modèle de l'école connectée uniquement
-        async function loadModeles() {
-          try {
-            const res = await fetch(apiUrl);
-            if (!res.ok) {
-              alert('Erreur lors du chargement des modèles');
-              return;
-            }
-      
-            const modeles = await res.json();
-            const modele = modeles.find(m => m.ecole_id === connectedEcoleId);
-      
-            const list = document.getElementById('modeles-list');
-            list.innerHTML = '';
-      
-            if (modele) {
-              const champs = Array.isArray(modele.details) ? modele.details.join(', ') : modele.details;
-              const li = document.createElement('li');
-              li.className = 'list-group-item';
-              li.textContent = `Modèle ID: ${modele.id} — École: ${modele.ecole_id} — Champs: ${champs}`;
-              list.appendChild(li);
-            } else {
-              list.innerHTML = '<li class="list-group-item text-muted">Aucun modèle trouvé pour cette école.</li>';
-            }
-      
-          } catch (err) {
-            console.error('Erreur chargement modèle:', err);
-            alert('Erreur de chargement');
+  <h1>Gestion des modèles de conventions</h1>
+
+  <!-- Liste du modèle -->
+  <h2>Modèle existant pour l'école</h2>
+  <ul id="modeles-list" class="list-group mb-4"></ul>
+
+  <!-- Formulaire création/mise à jour -->
+  <h2>Ajouter ou mettre à jour un modèle</h2>
+  <form id="modele-form" class="mb-4">
+    <div class="mb-3">
+      <label for="etudiant-details" class="form-label">Champs Étudiant (séparés par virgule)</label>
+      <input type="text" class="form-control" id="etudiant-details" placeholder="Ex : nom, prenom, age" />
+    </div>
+    <div class="mb-3">
+      <label for="ecole-details" class="form-label">Champs École (séparés par virgule)</label>
+      <input type="text" class="form-control" id="ecole-details" placeholder="Ex : directeur, professeur" />
+    </div>
+    <div class="mb-3">
+      <label for="entreprise-details" class="form-label">Champs Entreprise (séparés par virgule)</label>
+      <input type="text" class="form-control" id="entreprise-details" placeholder="Ex : responsable, chiffreDaffaire" />
+    </div>
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </form>
+
+  <script>
+    const apiUrl = 'http://localhost:3000/api/model-conventions';
+    const connectedEcoleId = 3; // À remplacer dynamiquement via session ou JWT
+
+    // Fonction d'affichage du modèle existant
+    async function loadModeles() {
+      try {
+        const res = await fetch(`${apiUrl}/by-ecole/${connectedEcoleId}`);
+        const list = document.getElementById('modeles-list');
+        list.innerHTML = '';
+
+        if (!res.ok) {
+          list.innerHTML = '<li class="list-group-item text-muted">Aucun modèle trouvé pour cette école.</li>';
+          return;
+        }
+
+        const modele = await res.json();
+        const details = typeof modele.details === 'string' ? JSON.parse(modele.details) : modele.details;
+
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.innerHTML = `
+          <strong>Modèle ID:</strong> ${modele.id} — <strong>École:</strong> ${modele.ecole_id}<br>
+          <strong>Étudiant:</strong> ${(details.Etudiant || []).join(', ')}<br>
+          <strong>École:</strong> ${(details.Ecole || []).join(', ')}<br>
+          <strong>Entreprise:</strong> ${(details.Entreprise || []).join(', ')}
+        `;
+        list.appendChild(li);
+
+      } catch (err) {
+        console.error('Erreur chargement modèle:', err);
+        alert('Erreur de chargement');
+      }
+    }
+
+    // Création ou mise à jour du modèle avec fusion des champs
+    document.getElementById('modele-form').addEventListener('submit', async e => {
+      e.preventDefault();
+
+      const parseInput = input =>
+        input.split(',').map(f => f.trim()).filter(f => f.length > 0);
+
+      const newDetails = {
+        Etudiant: parseInput(document.getElementById('etudiant-details').value),
+        Ecole: parseInput(document.getElementById('ecole-details').value),
+        Entreprise: parseInput(document.getElementById('entreprise-details').value)
+      };
+
+      try {
+        const getRes = await fetch(`${apiUrl}/by-ecole/${connectedEcoleId}`);
+
+        if (getRes.ok) {
+          // Fusion avec les anciens champs
+          const existing = await getRes.json();
+          const oldDetails = typeof existing.details === 'string' ? JSON.parse(existing.details) : existing.details;
+
+          const mergedDetails = {
+            Etudiant: Array.from(new Set([...(oldDetails.Etudiant || []), ...newDetails.Etudiant])),
+            Ecole: Array.from(new Set([...(oldDetails.Ecole || []), ...newDetails.Ecole])),
+            Entreprise: Array.from(new Set([...(oldDetails.Entreprise || []), ...newDetails.Entreprise]))
+          };
+
+          const updateRes = await fetch(`${apiUrl}/${existing.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ecole_id: connectedEcoleId, details: mergedDetails })
+          });
+
+          if (updateRes.ok) {
+            alert('Modèle mis à jour avec fusion réussie');
+            e.target.reset();
+            loadModeles();
+          } else {
+            alert('Erreur lors de la mise à jour');
+          }
+
+        } else {
+          // Création d'un nouveau modèle
+          const createRes = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ecole_id: connectedEcoleId, details: newDetails })
+          });
+
+          if (createRes.ok) {
+            alert('Modèle créé avec succès');
+            e.target.reset();
+            loadModeles();
+          } else {
+            alert('Erreur lors de la création du modèle');
           }
         }
-      
-        // Appel initial
-        loadModeles();
-      
-        // Le formulaire de création/màj fonctionne déjà correctement
-      </script>
-      
-  </body>
+      } catch (err) {
+        console.error('Erreur lors de la création/mise à jour :', err);
+        alert('Erreur inattendue');
+      }
+    });
+
+    // Chargement initial
+    loadModeles();
+  </script>
+</body>
 </html>

@@ -66,6 +66,9 @@ module.exports = {
       if (rows.length === 0) return res.status(404).json({ error: 'École non trouvée' });
 
       const { mot_de_passe, ...ecoleSansMotDePasse } = rows[0];
+      if (ecole.signature) {
+        ecole.signature = ecole.signature.toString('base64');
+      }
       res.json(ecoleSansMotDePasse);
     } catch (error) {
       console.error(error);
@@ -111,6 +114,9 @@ module.exports = {
       );
 
       if (result.affectedRows === 0) return res.status(404).json({ error: 'École non trouvée' });
+      if (ecole.signature && Buffer.isBuffer(ecole.signature)) {
+        ecole.signature = `data:image/png;base64,${ecole.signature.toString('base64')}`;
+      }
       res.json({ id: req.params.id });
     } catch (error) {
       console.error(error);
@@ -126,6 +132,33 @@ module.exports = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Erreur lors de la suppression de l'école" });
+    }
+  },
+
+  updateSignature: async (req, res) => {
+    try {
+      const { signature } = req.body;
+      const { id } = req.params;
+  
+      if (!signature) {
+        return res.status(400).json({ error: 'Signature manquante' });
+      }
+  
+      const bufferSignature = Buffer.from(signature, 'base64');
+  
+      const [result] = await pool.execute(
+        `UPDATE Ecole SET signature = ? WHERE id = ?`,
+        [bufferSignature, id]
+      );
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Ecole non trouvé' });
+      }
+  
+      res.json({ message: 'Signature mise à jour avec succès' });
+    } catch (error) {
+      console.error('Erreur updateSignature:', error);
+      res.status(500).json({ error: 'Erreur lors de la mise à jour de la signature' });
     }
   }
 };

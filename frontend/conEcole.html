@@ -45,7 +45,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       // Stocke le token si besoin
       localStorage.setItem('token', result.token);
       alert(result.message);
-      window.location.href = 'ecole.html'; // Redirige vers la page école
+      window.location.href = 'accueil-ecole.html'; // Redirige vers la page école
     } else {
       alert(result.error || 'Erreur de connexion');
     }

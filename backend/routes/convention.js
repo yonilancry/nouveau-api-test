@@ -4,8 +4,17 @@ const conventionController = require('../controller/Convention/conventionControl
 
 router.post('/', conventionController.createConvention);
 router.get('/', conventionController.getAllConventions);
+
+router.get('/user/:id', conventionController.getConventionByUser);
+
 router.get('/:id', conventionController.getConventionById);
 router.put('/:id', conventionController.updateConvention);
+
+
+
+router.get('/by-etudiant/:id', conventionController.getAllConventionsByEtudiant);
+
+
 
 // Routes spécifiques pour validation
 router.put('/:id/valider-entreprise', conventionController.validerParEntreprise);

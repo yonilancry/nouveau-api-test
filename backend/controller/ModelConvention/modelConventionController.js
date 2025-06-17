@@ -81,6 +81,34 @@ module.exports = {
       res.status(500).json({ error: 'Erreur serveur' });
     }
   },
+  
+  getConventionModelByEcoleId: async (req, res) => {
+    try {
+      const { ecole_id } = req.params;
+  
+      const [rows] = await pool.execute(
+        'SELECT * FROM ModelConvention WHERE ecole_id = ?',
+        [ecole_id]
+      );
+  
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Aucun modèle trouvé pour cette école' });
+      }
+  
+      const model = rows[0];
+      try {
+        model.details = model.details ? JSON.parse(model.details) : null;
+      } catch {
+        // En cas d'échec du parsing JSON, on garde la version brute
+      }
+  
+      res.json(model);
+    } catch (error) {
+      console.error('Erreur get modèle par école_id:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération du modèle de convention par école' });
+    }
+  },
+  
 
   updateModelConvention: async (req, res) => {
     try {
