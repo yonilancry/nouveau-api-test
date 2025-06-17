@@ -5,6 +5,7 @@ require('dotenv').config();
 const userRoutes = require('./routes/userRoutes.js');
 const app = express();
 app.use(express.json()); // parse JSON
+const modelConventionRoutes = require('./routes/modelConvention');
 /**
  * @swagger
  * /api/users:
@@ -66,4 +67,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
 console.log(`API en ligne sur http://localhost:${PORT}`);
+app.use('/api/model-conventions', modelConventionRoutes);
+
 });

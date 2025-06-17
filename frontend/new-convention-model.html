@@ -7,11 +7,10 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
 <body class="container py-4">
-
   <h1>Gestion des modèles de conventions</h1>
 
   <!-- Liste du modèle -->
-  <h2>Modèle existant pour l'école</h2>
+  <h2>Modèle existant</h2>
   <ul id="modeles-list" class="list-group mb-4"></ul>
 
   <!-- Formulaire création/mise à jour -->
@@ -34,12 +33,20 @@
 
   <script>
     const apiUrl = 'http://localhost:3000/api/model-conventions';
-    const connectedEcoleId = 3; // À remplacer dynamiquement via session ou JWT
+    const token = localStorage.getItem('token');
 
-    // Fonction d'affichage du modèle existant
+    if (!token) {
+      alert("Vous devez être connecté pour accéder à cette page.");
+      window.location.href = "connexionEcole.html";
+    }
+
+    // Récupération du modèle existant
     async function loadModeles() {
       try {
-        const res = await fetch(`${apiUrl}/by-ecole/${connectedEcoleId}`);
+        const res = await fetch(`${apiUrl}/by-ecole`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
         const list = document.getElementById('modeles-list');
         list.innerHTML = '';
 
@@ -54,7 +61,7 @@
         const li = document.createElement('li');
         li.className = 'list-group-item';
         li.innerHTML = `
-          <strong>Modèle ID:</strong> ${modele.id} — <strong>École:</strong> ${modele.ecole_id}<br>
+          <strong>Modèle ID:</strong> ${modele.id}<br>
           <strong>Étudiant:</strong> ${(details.Etudiant || []).join(', ')}<br>
           <strong>École:</strong> ${(details.Ecole || []).join(', ')}<br>
           <strong>Entreprise:</strong> ${(details.Entreprise || []).join(', ')}
@@ -67,7 +74,7 @@
       }
     }
 
-    // Création ou mise à jour du modèle avec fusion des champs
+    // Création ou mise à jour
     document.getElementById('modele-form').addEventListener('submit', async e => {
       e.preventDefault();
 
@@ -81,10 +88,12 @@
       };
 
       try {
-        const getRes = await fetch(`${apiUrl}/by-ecole/${connectedEcoleId}`);
+        // Vérifie s'il existe déjà un modèle
+        const getRes = await fetch(`${apiUrl}/by-ecole`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
 
         if (getRes.ok) {
-          // Fusion avec les anciens champs
           const existing = await getRes.json();
           const oldDetails = typeof existing.details === 'string' ? JSON.parse(existing.details) : existing.details;
 
@@ -96,24 +105,28 @@
 
           const updateRes = await fetch(`${apiUrl}/${existing.id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ecole_id: connectedEcoleId, details: mergedDetails })
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ details: mergedDetails })
           });
 
           if (updateRes.ok) {
-            alert('Modèle mis à jour avec fusion réussie');
+            alert('Modèle mis à jour avec succès');
             e.target.reset();
             loadModeles();
           } else {
             alert('Erreur lors de la mise à jour');
           }
-
         } else {
-          // Création d'un nouveau modèle
           const createRes = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ecole_id: connectedEcoleId, details: newDetails })
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ details: newDetails })
           });
 
           if (createRes.ok) {
@@ -121,7 +134,7 @@
             e.target.reset();
             loadModeles();
           } else {
-            alert('Erreur lors de la création du modèle');
+            alert('Erreur lors de la création');
           }
         }
       } catch (err) {
@@ -130,7 +143,6 @@
       }
     });
 
-    // Chargement initial
     loadModeles();
   </script>
 </body>

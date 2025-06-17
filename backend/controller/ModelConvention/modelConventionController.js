@@ -6,11 +6,9 @@ function parseDetails(details) {
 
   if (typeof details === 'string') {
     try {
-      // D'abord, tenter un JSON.parse si c'est du vrai JSON
       const parsed = JSON.parse(details);
       return JSON.stringify(parsed);
     } catch {
-      // Sinon, traiter comme une string séparée par des virgules
       const fields = details
         .split(',')
         .map(f => f.trim())
@@ -19,15 +17,20 @@ function parseDetails(details) {
     }
   }
 
-  // Si details est déjà un objet ou un tableau
   return JSON.stringify(details);
 }
 
 module.exports = {
-
+  // Création d'un modèle de convention par une école connectée
   createModelConvention: async (req, res) => {
     try {
-      const { details, ecole_id } = req.body;
+      const { details } = req.body;
+      const ecole_id = req.user?.id;
+
+      if (!ecole_id) {
+        return res.status(401).json({ error: 'Token invalide ou non fourni' });
+      }
+
       const detailsJson = parseDetails(details);
 
       const [result] = await pool.execute(
@@ -71,9 +74,7 @@ module.exports = {
       const model = rows[0];
       try {
         model.details = model.details ? JSON.parse(model.details) : null;
-      } catch {
-        // Si parse échoue, on laisse tel quel
-      }
+      } catch {}
 
       res.json(model);
     } catch (error) {
@@ -81,38 +82,41 @@ module.exports = {
       res.status(500).json({ error: 'Erreur serveur' });
     }
   },
-  
+
+  // Récupération du modèle pour l'école connectée
   getConventionModelByEcoleId: async (req, res) => {
     try {
-      const { ecole_id } = req.params;
-  
+      const ecole_id = req.user?.id;
+
+      if (!ecole_id) {
+        return res.status(401).json({ error: 'Token invalide ou manquant' });
+      }
+
       const [rows] = await pool.execute(
         'SELECT * FROM ModelConvention WHERE ecole_id = ?',
         [ecole_id]
       );
-  
+
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Aucun modèle trouvé pour cette école' });
       }
-  
+
       const model = rows[0];
       try {
         model.details = model.details ? JSON.parse(model.details) : null;
-      } catch {
-        // En cas d'échec du parsing JSON, on garde la version brute
-      }
-  
+      } catch {}
+
       res.json(model);
     } catch (error) {
       console.error('Erreur get modèle par école_id:', error);
       res.status(500).json({ error: 'Erreur lors de la récupération du modèle de convention par école' });
     }
   },
-  
 
   updateModelConvention: async (req, res) => {
     try {
-      const { details, ecole_id } = req.body;
+      const { details } = req.body;
+      const ecole_id = req.user?.id;
       const detailsJson = parseDetails(details);
 
       const [result] = await pool.execute(
